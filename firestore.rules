@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isDeveloper() {
+      return request.auth != null
+             && request.auth.token.email == 'contact@astro-root.com';
+    }
+    match /chat_sessions/{sessionId} {
+      allow get: if request.auth != null
+                  && (
+                    resource == null
+                    || resource.data.ownerUid == request.auth.uid
+                    || isDeveloper()
+                  );
+      allow list: if isDeveloper();
+      allow delete: if isDeveloper();
+      allow create: if request.auth != null
+                     && request.resource.data.ownerUid == request.auth.uid
+                     && request.resource.data.mode == 'ai';
+      allow update: if request.auth != null && (
+        (
+          resource.data.ownerUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['calledAt', 'lastMessageAt', 'lastMessagePreview'])
+        )
+        ||
+        (
+          isDeveloper()
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['mode', 'lastMessageAt', 'lastMessagePreview'])
+          && (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['mode'])
+            || request.resource.data.mode in ['ai', 'developer']
+          )
+        )
+      );
+      match /messages/{messageId} {
+        allow read: if request.auth != null
+                     && (
+                       get(/databases/$(database)/documents/chat_sessions/$(sessionId)).data.ownerUid == request.auth.uid
+                       || isDeveloper()
+                     );
+        allow delete: if isDeveloper();
+        allow create: if request.auth != null && (
+          (
+            get(/databases/$(database)/documents/chat_sessions/$(sessionId)).data.ownerUid == request.auth.uid
+            && request.resource.data.sender in ['user', 'bot']
+          )
+          ||
+          (
+            isDeveloper()
+            && request.resource.data.sender == 'developer'
+          )
+        );
+      }
+    }
+  }
+}

@@ -1,0 +1,90 @@
+:root {
+  --bg-0: #05010f;
+  --bg-1: #0a0322;
+  --bg-2: #120a38;
+  --bg-card: rgba(18, 9, 42, 0.85);
+  --bg-card-hover: rgba(28, 14, 62, 0.95);
+  --bg-glass: rgba(9, 3, 26, 0.72);
+
+  --accent-blue: #6a7bff;
+  --accent-teal: #2be0c2;
+  --accent-purple: #d857ff;
+  --accent-amber: #ffc069;
+
+  --text-0: #f5f2ff;
+  --text-1: #ab9fd4;
+  --text-2: #7c6fa3;
+
+  --border: rgba(106, 123, 255, 0.14);
+  --border-m: rgba(106, 123, 255, 0.28);
+  --border-hover: rgba(106, 123, 255, 0.55);
+  --glow-blue: rgba(106, 123, 255, 0.18);
+  --glow-teal: rgba(43, 224, 194, 0.18);
+  --glow-purple: rgba(216, 87, 255, 0.18);
+  --glow-amber: rgba(255, 192, 105, 0.16);
+
+  --nebula-gradient: radial-gradient(circle at 30% 20%, rgba(216, 87, 255, 0.16), transparent 55%),
+    radial-gradient(circle at 75% 60%, rgba(106, 123, 255, 0.14), transparent 55%),
+    radial-gradient(circle at 50% 100%, rgba(43, 224, 194, 0.10), transparent 60%);
+
+  --font-display: "Syne", "Noto Sans JP", sans-serif;
+  --font-mono: "JetBrains Mono", "Noto Sans JP", monospace;
+  --font-body: "Noto Sans JP", sans-serif;
+
+  --fs-2xs: 0.72rem;
+  --fs-xs:  0.80rem;
+  --fs-sm:  0.88rem;
+  --fs-base:0.95rem;
+  --fs-md:  1.05rem;
+  --fs-lg:  1.25rem;
+
+  /*
+    letter-spacingスケール:
+    monoフォント中心に過剰なトラッキング(0.2〜0.3em)を多用していたため
+    可読性重視で全体を縮小。英単語ラベルでも自然に読めるレベルに統一。
+  */
+  --ls-tight:  0.02em;
+  --ls-normal: 0.04em;
+  --ls-wide:   0.07em;
+  --ls-label:  0.10em;
+
+  --r-xs: 4px;
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 22px;
+  --r-xl: 28px;
+  --r-2xl: 40px;
+
+  --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --t: 0.28s;
+  --t-fast: 0.16s;
+  --t-slow: 0.5s;
+
+  --nav-h: 64px;
+  --container-max: 1120px;
+  --container-pad: clamp(18px, 5vw, 64px);
+
+  --z-bg: 0;
+  --z-base: 1;
+  --z-card: 10;
+  --z-nav: 500;
+  --z-modal: 800;
+  --z-toast: 900;
+  --z-cursor: 9999;
+  --z-progress: 9998;
+}
+
+@media (max-width: 480px) {
+  :root { --nav-h: 58px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Chat | Admin | るーとの研究室</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#05010f" />
+  <link rel="icon" href="/favicon.ico" />
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="/assets/js/firebase-init.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="/assets/css/variables.css" />
+  <link rel="stylesheet" href="/assets/css/base.css" />
+  <style>
+    body { display: flex; flex-direction: column; min-height: 100vh; padding: 24px; }
+
+    .chat-admin-header {
+      max-width: 960px;
+      margin: 0 auto 20px;
+      width: 100%;
+    }
+
+    .chat-admin-title {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text-0);
+      margin-bottom: 8px;
+    }
+
+    .fb-login-wrap {
+      max-width: 360px;
+      margin: 80px auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-xl);
+      padding: 24px;
+    }
+
+    .fb-login-wrap p.fb-login-note {
+      font-family: var(--font-mono);
+      font-size: var(--fs-2xs);
+      color: var(--text-2);
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+
+    .fb-login-field {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 10px 12px;
+      color: var(--text-0);
+      font-size: var(--fs-sm);
+      outline: none;
+      margin-bottom: 10px;
+    }
+
+    .fb-login-field:focus { border-color: var(--accent-blue); }
+
+    .fb-login-btn {
+      width: 100%;
+      padding: 10px;
+      border-radius: var(--r-sm);
+      border: none;
+      background: linear-gradient(120deg, var(--accent-blue), var(--accent-teal));
+      color: var(--bg-0);
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .fb-login-error {
+      color: #ff6b6b;
+      font-family: var(--font-mono);
+      font-size: var(--fs-2xs);
+      margin-top: 10px;
+      min-height: 1em;
+    }
+
+    #chat-admin-main { display: none; }
+
+    .chat-admin-layout {
+      max-width: 960px;
+      margin: 0 auto;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 16px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .inbox-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-xl);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      max-height: 640px;
+    }
+
+    .inbox-header {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: var(--fs-2xs);
+      color: var(--text-2);
+      letter-spacing: var(--ls-wide);
+      text-transform: uppercase;
+    }
+
+    .inbox-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .inbox-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: none;
+      border-left: 3px solid transparent;
+      cursor: pointer;
+      color: var(--text-1);
+    }
+
+    .inbox-item { position: relative; }
+    .inbox-item:hover { background: rgba(106, 123, 255,0.05); }
+    .inbox-item.active { background: rgba(106, 123, 255,0.08); border-left-color: var(--accent-blue); }
+
+    .inbox-item-delete {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: var(--text-2);
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .inbox-item-delete:hover { color: #ff6b6b; background: rgba(255,107,107,0.1); }
+
+    .inbox-item-id {
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      color: var(--text-2);
+      margin-bottom: 4px;
+    }
+
+    .inbox-item-preview {
+      font-size: var(--fs-xs);
+      color: var(--text-1);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-bottom: 4px;
+    }
+
+    .inbox-item-status {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.55rem;
+      letter-spacing: var(--ls-wide);
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .inbox-item-status[data-status="ai"] { background: rgba(168,120,255,0.16); color: #c9a8ff; }
+    .inbox-item-status[data-status="developer"] { background: rgba(43, 224, 194,0.14); color: var(--accent-teal); }
+    .inbox-item-status[data-status="pending"] { background: rgba(255, 192, 105,0.14); color: var(--accent-amber); }
+
+    .mode-toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 18px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .mode-toggle-label {
+      font-family: var(--font-mono);
+      font-size: var(--fs-2xs);
+      color: var(--text-2);
+    }
+
+    .mode-toggle-btn {
+      padding: 6px 14px;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border-m);
+      background: rgba(168,120,255,0.12);
+      color: #c9a8ff;
+      font-family: var(--font-mono);
+      font-size: var(--fs-2xs);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .mode-toggle-btn[data-mode="developer"] {
+      background: rgba(43, 224, 194,0.14);
+      color: var(--accent-teal);
+    }
+
+    .session-id-row {
+      display: flex;
+      gap: 8px;
+      max-width: 960px;
+      margin: 0 auto 12px;
+      width: 100%;
+    }
+
+    .session-id-input {
+      flex: 1;
+      background: rgba(106, 123, 255,0.03);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 10px 14px;
+      color: var(--text-0);
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      outline: none;
+    }
+
+    .session-id-input:focus { border-color: var(--accent-blue); }
+
+    .session-id-btn {
+      padding: 10px 18px;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border-m);
+      background: rgba(106, 123, 255,0.08);
+      color: var(--accent-blue);
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      cursor: pointer;
+    }
+
+    .chat-thread-wrap {
+      width: 100%;
+      height: 640px;
+      max-height: 640px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-xl);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-thread-status {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      color: var(--accent-teal);
+    }
+
+    .chat-thread-messages {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .chat-bubble {
+      max-width: 78%;
+      padding: 10px 14px;
+      border-radius: var(--r-md);
+      font-size: var(--fs-sm);
+      line-height: 1.7;
+    }
+
+    .chat-bubble[data-sender="user"] { align-self: flex-start; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-0); }
+    .chat-bubble[data-sender="bot"] { align-self: flex-start; background: rgba(255, 192, 105,0.06); border: 1px solid rgba(255, 192, 105,0.2); color: var(--text-1); }
+    .chat-bubble[data-sender="developer"] { align-self: flex-end; background: rgba(43, 224, 194,0.14); border: 1px solid rgba(43, 224, 194,0.3); color: var(--text-0); }
+
+    .chat-bubble-label {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 0.55rem;
+      letter-spacing: var(--ls-wide);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      opacity: 0.7;
+    }
+
+    .chat-reply-row {
+      display: flex;
+      gap: 8px;
+      padding: 14px 18px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .chat-reply-input {
+      flex: 1;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 10px 14px;
+      color: var(--text-0);
+      font-size: var(--fs-sm);
+      outline: none;
+      resize: none;
+    }
+
+    .chat-reply-btn {
+      padding: 10px 20px;
+      border-radius: var(--r-sm);
+      border: none;
+      background: linear-gradient(120deg, var(--accent-blue), var(--accent-teal));
+      color: var(--bg-0);
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    @media (max-width: 720px) {
+      body { padding: 12px; }
+      .chat-admin-layout { grid-template-columns: 1fr; gap: 12px; }
+      .inbox-panel { max-height: 200px; }
+      .chat-thread-wrap {
+        height: auto;
+        max-height: none;
+      }
+      .chat-thread-messages {
+        min-height: 260px;
+        max-height: 50vh;
+        max-height: 50dvh;
+      }
+      .session-id-row { flex-direction: column; }
+      .session-id-btn { width: 100%; }
+      .chat-reply-row { flex-direction: column; align-items: stretch; }
+      .chat-reply-btn { width: 100%; }
+      .chat-reply-input { font-size: 16px; }
+    }
+
+    @media (max-width: 420px) {
+      .chat-admin-title { font-size: 1.1rem; }
+      .inbox-item-preview { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="fb-login-wrap" id="fb-login-wrap">
+    <p class="chat-admin-title">開発者ログイン</p>
+    <p class="fb-login-note">
+      Firestoreセキュリティルールにより、Live Chat機能はFirebase Authenticationでの
+      ログインを必須にしています。事前にFirebaseコンソールの
+      Authentication &gt; Users で作成した開発者アカウントでログインしてください。
+    </p>
+    <input type="email" class="fb-login-field" id="fb-login-email" placeholder="メールアドレス" autocomplete="username" />
+    <input type="password" class="fb-login-field" id="fb-login-password" placeholder="パスワード" autocomplete="current-password" />
+    <button class="fb-login-btn" id="fb-login-btn">ログイン</button>
+    <p class="fb-login-error" id="fb-login-error"></p>
+  </div>
+
+  <div id="chat-admin-main">
+    <div class="chat-admin-header">
+      <p class="chat-admin-title">Live Chat 対応</p>
+      <p style="font-family:var(--font-mono);font-size:var(--fs-2xs);color:var(--text-2);">左の受信箱から選択するか、メールのリンク、またはセッションIDを直接入力してください。</p>
+    </div>
+
+    <div class="session-id-row">
+      <input type="text" class="session-id-input" id="session-id-input" placeholder="セッションID (sess-...)" />
+      <button class="session-id-btn" id="session-id-open">開く</button>
+    </div>
+
+    <div class="chat-admin-layout">
+      <div class="inbox-panel">
+        <div class="inbox-header">受信箱(全セッション)</div>
+        <div class="inbox-list" id="inbox-list">
+          <div style="padding:14px;font-family:var(--font-mono);font-size:var(--fs-2xs);color:var(--text-2);">読み込み中...</div>
+        </div>
+      </div>
+
+      <div class="chat-thread-wrap">
+        <div class="chat-thread-status" id="thread-status">セッションを選択してください</div>
+        <div class="mode-toggle-row" id="mode-toggle-row" style="display:none;">
+          <span class="mode-toggle-label">対応モード:</span>
+          <button class="mode-toggle-btn" id="mode-toggle-btn" data-mode="ai">AI対応中</button>
+        </div>
+        <div class="chat-thread-messages" id="thread-messages"></div>
+        <div class="chat-reply-row">
+          <textarea class="chat-reply-input" id="reply-input" rows="2" placeholder="返信を入力..."></textarea>
+          <button class="chat-reply-btn" id="reply-send">送信</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/admin/js/admin-auth.js"></script>
+  <script>
+  (function () {
+    "use strict";
+
+    /* 既存の簡易パスワードゲート(サイト全体の管理画面共通)。
+       Firebase Authとは別の防御層として維持する。 */
+    AdminAuth.requireAuth();
+
+    var db = null;
+    var currentSessionId = null;
+    var unsubMessages = null;
+    var unsubSession = null;
+    var unsubInbox = null;
+
+    function esc(s) {
+      return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    /* ── Firebase Authログイン ── */
+    function showLoginError(msg) {
+      document.getElementById("fb-login-error").textContent = msg;
+    }
+
+    function attemptLogin() {
+      if (!window.LAB_FIREBASE) {
+        showLoginError("Firebase未設定です。assets/js/firebase-init.js を確認してください。");
+        return;
+      }
+      var email = document.getElementById("fb-login-email").value.trim();
+      var password = document.getElementById("fb-login-password").value;
+      if (!email || !password) {
+        showLoginError("メールアドレスとパスワードを入力してください。");
+        return;
+      }
+      showLoginError("");
+      window.LAB_FIREBASE.auth.signInWithEmailAndPassword(email, password)
+        .catch(function (err) {
+          console.error("ログイン失敗:", err);
+          showLoginError("ログインに失敗しました。メールアドレスとパスワードを確認してください。");
+        });
+    }
+
+    document.getElementById("fb-login-btn").addEventListener("click", attemptLogin);
+    document.getElementById("fb-login-password").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") attemptLogin();
+    });
+
+    function unlockUI() {
+      document.getElementById("fb-login-wrap").style.display = "none";
+      document.getElementById("chat-admin-main").style.display = "block";
+      db = window.LAB_FIREBASE.db;
+
+      subscribeInbox();
+
+      var queryId = new URLSearchParams(window.location.search).get("session");
+      if (queryId) {
+        document.getElementById("session-id-input").value = queryId;
+        openSession(queryId);
+      }
+    }
+
+    if (window.LAB_FIREBASE) {
+      window.LAB_FIREBASE.auth.onAuthStateChanged(function (user) {
+        if (user && !user.isAnonymous) {
+          unlockUI();
+        } else {
+          document.getElementById("fb-login-wrap").style.display = "block";
+          document.getElementById("chat-admin-main").style.display = "none";
+        }
+      });
+    } else {
+      showLoginError("Firebase未設定です。assets/js/firebase-init.js を確認してください。");
+    }
+
+    /* ── 受信箱(全セッション一覧、AI対応済みチャットも含む) ── */
+    var MODE_LABEL = {
+      ai: "AI対応中",
+      developer: "開発者対応中"
+    };
+
+    function subscribeInbox() {
+      if (unsubInbox) unsubInbox();
+      unsubInbox = db.collection("chat_sessions")
+        .orderBy("lastMessageAt", "desc")
+        .limit(50)
+        .onSnapshot(function (snap) {
+          var list = document.getElementById("inbox-list");
+          list.innerHTML = "";
+          if (snap.empty) {
+            list.innerHTML = '<div style="padding:14px;font-family:var(--font-mono);font-size:var(--fs-2xs);color:var(--text-2);">セッションがありません</div>';
+            return;
+          }
+          snap.forEach(function (doc) {
+            var data = doc.data();
+            var mode = data.mode || "ai";
+            var pending = mode === "ai" && !!data.calledAt;
+            var badgeStatus = pending ? "pending" : mode;
+            var badgeLabel = pending ? "要対応(呼び出しあり)" : (MODE_LABEL[mode] || mode);
+            var item = document.createElement("div");
+            item.className = "inbox-item";
+            if (doc.id === currentSessionId) item.classList.add("active");
+            item.innerHTML =
+              '<div class="inbox-item-id">' + esc(doc.id) + '</div>' +
+              '<div class="inbox-item-preview">' + esc(data.lastMessagePreview || "(メッセージなし)") + '</div>' +
+              '<span class="inbox-item-status" data-status="' + esc(badgeStatus) + '">' +
+              esc(badgeLabel) + '</span>' +
+              '<button class="inbox-item-delete" data-session-id="' + esc(doc.id) + '" title="このセッションを削除">削除</button>';
+            item.addEventListener("click", function (e) {
+              if (e.target.classList.contains("inbox-item-delete")) return;
+              document.getElementById("session-id-input").value = doc.id;
+              openSession(doc.id);
+            });
+            item.querySelector(".inbox-item-delete").addEventListener("click", function (e) {
+              e.stopPropagation();
+              deleteSession(doc.id);
+            });
+            list.appendChild(item);
+          });
+        }, function (err) {
+          console.error("受信箱の購読エラー:", err);
+          document.getElementById("inbox-list").innerHTML =
+            '<div style="padding:14px;font-family:var(--font-mono);font-size:var(--fs-2xs);color:#ff6b6b;">受信箱の読み込みに失敗しました</div>';
+        });
+    }
+
+    function renderMessage(msg) {
+      var container = document.getElementById("thread-messages");
+      var label = { user: "訪問者", bot: "自動応答", developer: "あなた" }[msg.sender] || msg.sender;
+      var div = document.createElement("div");
+      div.className = "chat-bubble";
+      div.dataset.sender = msg.sender;
+      div.innerHTML = '<span class="chat-bubble-label">' + esc(label) + '</span>' + esc(msg.text);
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function openSession(sessionId) {
+      if (!db) return;
+      currentSessionId = sessionId;
+
+      /* 受信箱側のアクティブ表示を更新 */
+      var items = document.querySelectorAll(".inbox-item");
+      items.forEach(function (el) {
+        var idEl = el.querySelector(".inbox-item-id");
+        el.classList.toggle("active", idEl && idEl.textContent === sessionId);
+      });
+
+      if (unsubMessages) unsubMessages();
+      if (unsubSession) unsubSession();
+
+      var sessionRef = db.collection("chat_sessions").doc(sessionId);
+
+      unsubSession = sessionRef.onSnapshot(function (doc) {
+        if (!doc.exists) {
+          document.getElementById("thread-status").textContent = "該当のセッションが見つかりません。";
+          document.getElementById("mode-toggle-row").style.display = "none";
+          return;
+        }
+        var data = doc.data();
+        var mode = data.mode || "ai";
+        document.getElementById("thread-status").textContent =
+          "セッション: " + sessionId + " / モード: " + (MODE_LABEL[mode] || mode);
+
+        var toggleBtn = document.getElementById("mode-toggle-btn");
+        toggleBtn.dataset.mode = mode;
+        toggleBtn.textContent = mode === "developer" ? "開発者対応中(クリックでAIに戻す)" : "AI対応中(クリックで引き継ぐ)";
+        document.getElementById("mode-toggle-row").style.display = "flex";
+      }, function (err) {
+        console.error("セッション購読エラー:", err);
+        document.getElementById("thread-status").textContent = "アクセス権限がありません(ルールを確認してください)。";
+        document.getElementById("mode-toggle-row").style.display = "none";
+      });
+
+      unsubMessages = sessionRef.collection("messages").orderBy("createdAt", "asc")
+        .onSnapshot(function (snap) {
+          var container = document.getElementById("thread-messages");
+          container.innerHTML = "";
+          snap.forEach(function (doc) { renderMessage(doc.data()); });
+        }, function (err) {
+          console.error("メッセージ購読エラー:", err);
+        });
+    }
+
+    function sendReply() {
+      var input = document.getElementById("reply-input");
+      var text = (input.value || "").trim();
+      if (!text || !currentSessionId || !db) return;
+      input.value = "";
+
+      var sessionRef = db.collection("chat_sessions").doc(currentSessionId);
+      var msgRef = sessionRef.collection("messages").doc();
+      var batch = db.batch();
+      batch.set(msgRef, {
+        sender: "developer",
+        text: text,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      /*
+        開発者が実際に返信した時点で、mode を自動的に developer へ切り替える。
+        従来は手動の「引き継ぐ」ボタンを押し忘れると、AIが並行して
+        自動応答を続けてしまい、開発者の返信とAIの返信が交錯する
+        原因になっていた。
+      */
+      batch.update(sessionRef, {
+        mode: "developer",
+        lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastMessagePreview: text.slice(0, 80)
+      });
+      batch.commit().catch(function (err) {
+        console.error("返信送信失敗:", err);
+      });
+    }
+
+    function toggleMode() {
+      if (!currentSessionId || !db) return;
+      var btn = document.getElementById("mode-toggle-btn");
+      var current = btn.dataset.mode || "ai";
+      var next = current === "developer" ? "ai" : "developer";
+      btn.disabled = true;
+      db.collection("chat_sessions").doc(currentSessionId).update({ mode: next })
+        .catch(function (err) {
+          console.error("モード切り替え失敗:", err);
+          alert("モードの切り替えに失敗しました。権限を確認してください。");
+        })
+        .finally(function () {
+          btn.disabled = false;
+        });
+    }
+
+    document.getElementById("mode-toggle-btn").addEventListener("click", toggleMode);
+
+    function deleteSession(sessionId) {
+      if (!db) return;
+      if (!confirm("セッション " + sessionId + " を完全に削除します。よろしいですか?(元に戻せません)")) return;
+      var sessionRef = db.collection("chat_sessions").doc(sessionId);
+      sessionRef.collection("messages").get().then(function (snap) {
+        var batch = db.batch();
+        snap.forEach(function (doc) { batch.delete(doc.ref); });
+        return batch.commit();
+      }).then(function () {
+        return sessionRef.delete();
+      }).then(function () {
+        if (currentSessionId === sessionId) {
+          currentSessionId = null;
+          document.getElementById("thread-status").textContent = "セッションを選択してください";
+          document.getElementById("thread-messages").innerHTML = "";
+          document.getElementById("mode-toggle-row").style.display = "none";
+        }
+      }).catch(function (err) {
+        console.error("セッション削除失敗:", err);
+        alert("削除に失敗しました。権限を確認してください。");
+      });
+    }
+
+    document.getElementById("session-id-open").addEventListener("click", function () {
+      var id = document.getElementById("session-id-input").value.trim();
+      if (id) openSession(id);
+    });
+
+    document.getElementById("reply-send").addEventListener("click", sendReply);
+    document.getElementById("reply-input").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendReply();
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+*.bak
+*.bak[0-9]
+custom-captcha-quiz/
+worker/.wrangler/

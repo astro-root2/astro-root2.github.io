@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin/
+Disallow: /q-score/api/
+Disallow: /q-panel/api/
+Disallow: /q-mark/api/
+
+Sitemap: https://astro-root.com/sitemap.xml
